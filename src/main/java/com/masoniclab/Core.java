@@ -10,6 +10,7 @@ public class Core {
 
     public static void main(String[] args) throws Exception {
 
+
         if (args.length < 1) {
             System.out.println("请输入搜索关键词");
             System.out.println("Usage: java -jar sophy.jar <keyword> [index_pages] [fav_pages]");
@@ -48,7 +49,6 @@ public class Core {
         }
     }
 
-
     public static void runById(String id) throws Exception {
         ArrayList<String> urls = new ArrayList<>();
         urls.add("https://www.zhihu.com/collection/" + id);
@@ -68,9 +68,8 @@ public class Core {
         PrintWriter out = new PrintWriter(new BufferedWriter(new OutputStreamWriter(new FileOutputStream(fname + ".csv"), "GBk")));
         out.write("title,url,upvote,author_name,author_link\n");
         for (Item item : items) {
-            out.write(item.title.replace(",","") + "," + item.url + "," + item.upvote + "," + item.author_name + "," + item.author_link + "\n");
+            out.write(item.title.replace(",", "") + "," + item.url + "," + item.upvote + "," + item.author_name + "," + item.author_link + "\n");
         }
-        out.flush();
         out.close();
     }
 }

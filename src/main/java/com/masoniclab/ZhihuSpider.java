@@ -1,8 +1,11 @@
 package com.masoniclab;
 
+import cn.edu.hfut.dmic.webcollector.model.CrawlDatum;
 import cn.edu.hfut.dmic.webcollector.model.CrawlDatums;
 import cn.edu.hfut.dmic.webcollector.model.Page;
 import cn.edu.hfut.dmic.webcollector.plugin.berkeley.BreadthCrawler;
+import cn.edu.hfut.dmic.webcollector.plugin.net.OkHttpRequester;
+import okhttp3.Request;
 import org.bson.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -20,13 +23,32 @@ public class ZhihuSpider extends BreadthCrawler {
 
     public ZhihuSpider(String path, boolean autoParse) {
         super(path, autoParse);
+        setRequester(new ZhihuSpider.MyRequester());
+    }
+
+    public static class MyRequester extends OkHttpRequester {
+        @Override
+        public Request.Builder createRequestBuilder(CrawlDatum crawlDatum) {
+            return super.createRequestBuilder(crawlDatum)
+                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                    .header("Accept-Language", "zh-CN,zh;q=0.8")
+                    .header("Cache-Control", "max-age=0")
+                    .header("Connection", "keep-alive")
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36");
+        }
     }
 
     public void visit(Page page, CrawlDatums next) {
+        if (page.code() == 404) {
+            System.out.println("Error, request blocked");
+            this.stop();
+        }
+
         String empty_placeholder = page.select("div[class=zu-list-empyt-place-holder zg-r5px]").text();
+        System.out.println(empty_placeholder);
         String url = page.url();
         // 页码溢出
-        if (!empty_placeholder.equals("该收藏夹还没有任何内容")) {
+        if (!empty_placeholder.contains("该收藏夹还没有任何内容")) {
             // 扩增url
             if (!url.contains("page")) {
                 url += "?page=1";
@@ -45,11 +67,13 @@ public class ZhihuSpider extends BreadthCrawler {
                 Elements title = item.select("h2[class=zm-item-title]").select("a[target=_blank]");
                 Elements favs = item.select("div[class=zm-item-fav]");
 
-                output.add(new Item(title.text(),
+                Item i = new Item(title.text(),
                         title.attr("href").startsWith("/") ? "http://www.zhihu.com" + title.attr("href") : title.attr("href"),
                         favs.select("div[tabindex=-1]").select("div[tabindex=-1]").select("div[class=zm-item-vote]").select("a[class=zm-item-vote-count js-expand js-vote-count]").text(),
                         favs.select("a[class=author-link]").text(),
-                        "http://www.zhihu.com" + favs.select("a[class=author-link]").attr("href")));
+                        "http://www.zhihu.com" + favs.select("a[class=author-link]").attr("href"));
+                System.out.println(i.title);
+                output.add(i);
             }
         }
     }
@@ -70,8 +94,8 @@ public class ZhihuSpider extends BreadthCrawler {
             }
         }
 
-        zs.setThreads(10);
-        zs.getConf().setExecuteInterval(2000);
+        zs.setThreads(5);
+        zs.getConf().setExecuteInterval(2500);
 
         zs.output.clear();
         zs.start(Core.fav_pages);
